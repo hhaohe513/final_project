@@ -1,30 +1,171 @@
 ---
-title: "Final_project"
+title: "Final Project"
 author: "Hao He"
-date: "12/3/2020"
+date: "12/7/2020"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(survey)
+getwd()
+setwd("C:/Users/hehao/Downloads/506_final/final_project/data")
 ```
 
-## R Markdown
+# Introduction  
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Sleeping time constitutes almost 1/3 of our daily activities. It is closely 
+related to people's mood, working efficiency and health conditions. In this 
+analysis, we will consider blood pressure as an indicator of people's health
+condition and we aim to investigate the following question:   
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+> Do people with sleeping disorder tend to have higher blood pressures? 
 
-```{r cars}
-summary(cars)
+**R** is the main software we will use for this analysis. Packages *survey*
+and *dplyr* are also used.
+We will proceed this analysis by defining binary variables that distinguish
+people with high/normal blood pressure and people with/without sleep disorder.
+Then we will provide point estimates and 95% confidence intervals for the mean 
+blood pressure for people with/without sleep disorder. We will also find 
+points estimates and confidence intervals for the difference between these two
+groups of people and check whether 0 is included in the confidence interval.
+Finally, we will use a regression approach to study whether sleep disorder
+is a significant factor that determine blood pressures or not.
+
+# Data
+We will use the 2017-2018 NHANES [demographic](https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.XPT),
+[sleep disorder](https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SLQ_J.XPT) and
+[blood pressure](https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/BPX_J.XPT) data
+for this analysis.    
+The specific variables of interests are listed below.  
+`SEQN`: id  
+`RIDAGEYR`: age
+`RIAGENDR` : gender
+`RIDSTATR`: status  
+`SDMVPSU`: pseudo-PSU  
+`SDMVSTRA`: pseudo-stratum  
+`WTMEC2YR`: MEC exam weight  
+`SLD012`:weekday sleep hours  
+`SLD013`:weekend sleep hours  
+`SLQ050`:ever told doctor had trouble sleeping  
+`SLQ120`:how often fell overly sleepy during day  
+`BPXSY1`:Systolic Blood Presure 1st measurement  
+`BPXSY2`:Systolic Blood Presure 2nd measurement  
+`BPXSY3`:Systolic Blood Presure 3rd measurement  
+`BPXDI1`:Diastolic Blood Presure 1st measurement  
+`BPXDI2`:Diastolic Blood Presure 2nd measurement  
+`BPXDI3`:Diastolic Blood Presure 3rd measurement  
+
+# Method
+
+### Data Manipulation
+
+```{r load data and some manipulation, include = FALSE}
+# Load data
+setwd("C:/Users/hehao/Downloads/506_final/final_project/data")
+demo = haven::read_xpt("DEMO_J.XPT") %>% 
+  select(id = SEQN, status = RIDSTATR, weight = WTMEC2YR, age = RIDAGEYR,
+         gender = RIAGENDR, psu = SDMVPSU, strata = SDMVSTRA) %>%
+  filter(status == 2)
+bp = haven::read_xpt("BPX_J.XPT") %>%
+  select(id = SEQN, BPXSY1, BPXSY2, BPXSY3, BPXDI1, BPXDI2, BPXDI3) %>%
+  filter(BPXSY1 >= 0 & BPXSY2 >=0 & BPXSY3 >= 0) %>%
+  filter(BPXDI1 >= 0 & BPXDI2 >=0 & BPXDI3 >= 0) %>%
+  mutate(BPXSY = (BPXSY1 + BPXSY2 + BPXSY3)/3) %>% 
+  mutate(BPXDI = (BPXDI1 + BPXDI2 + BPXDI3)/3)
+sleep = haven::read_xpt("SLQ_J.XPT") %>%
+  select(id = SEQN, wkday_hour = SLD012, wkend_hour = SLD013,
+         told_doctor = SLQ050, over_sleepy = SLQ120) %>%
+  filter(wkday_hour < 15 & wkend_hour < 15 & told_doctor < 7 & 
+           over_sleepy < 5) %>%
+  mutate(is_disorder = ifelse(wkday_hour < 6 |
+                                wkend_hour < 7 |
+                                told_doctor == 1 |
+                                over_sleepy > 3,1,0))
+merged = demo %>%
+  inner_join(sleep, by = "id") %>%
+  inner_join(bp, by = "id") %>%
+  select(id, age, gender, weight, psu, strata, is_disorder, BPXSY, BPXDI)
 ```
 
-## Including Plots
+We will create the following variables to represent the subjects' systolic 
+and diastolic blood pressure level, and whether the subject has sleep disorder
+or not.
 
-You can also embed plots, for example:
+`BPXSY` : the average systolic blood pressure out of three measurements  
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+`BPXDI` : the average diastolic blood pressure out of three measurements  
+
+`is_disorder` *= 1*  if any of the following conditions is met: weekday sleep
+hour less than 6, weekend sleep hour less than 7, have ever told doctor with
+trouble sleeping, feel overly sleepy for more than 15 times per month. And *= 0*
+otherwise.
+
+Codes for the data manipulation stated above can be found at 
+[github_link](https://github.com/hhaohe513/final_project) in final_project.R 
+
+### Point Estimate and Confidence Interval
+We will use the survey
+design([svydesign()](https://cran.r-project.org/web/packages/survey/survey.pdf))
+to find accurate point estimates and confidence intervals for each
+group(with/without sleep disorder) and also their differences.
+
+The codes for using svydesign() is presented below:  
+
+```{r svydesign code, include = TRUE}
+svy = svydesign(ids = ~psu, weights = ~weight, strata = ~strata,
+                data = merged, nest = TRUE)
+mean_se = as.data.frame(svyby(~BPXSY + BPXDI,
+                              by = ~is_disorder, svy,  svymean))
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Regression Approach
+
+Still working On it  
+
+# Results
+
+### Result from point estimate and confidence interval
+```{r point estimate results, include = FALSE}
+nice_table = data.frame("Variables" = c("BPXSY","BPXDI"),
+                        "mean_disorder" = c(mean_se[2,2],mean_se[2,3]),
+                        "mean_normal" = c(mean_se[1,2],mean_se[1,3]),
+                        "se_disorder" = c(mean_se[2,4],mean_se[2,5]),
+                        "se_normal" = c(mean_se[2,4],mean_se[2,5])) %>%
+  mutate(mean_diff = mean_disorder - mean_normal) %>%
+  mutate(lwr_diff = mean_diff - sqrt(se_disorder^2 + se_normal^2)*qnorm(0.975),
+         upr_diff = mean_diff + 
+           sqrt(se_disorder^2 + se_normal^2)*qnorm(0.975)) %>%
+  select(Variables, mean_disorder, mean_normal, mean_diff, lwr_diff, upr_diff)
+```
+
+```{r table for presentation, include = TRUE}
+nice_table %>% 
+  knitr::kable(
+    format = 'html', 
+    escape = FALSE, 
+    align = 'llccc',
+    digits = 4
+  ) %>%
+  kableExtra::kable_styling("striped", full_width = TRUE)
+```
+
+From the resulting table, we see that for both systolic and diastolic blood
+pressure, 0 is not included in the confidence interval for the difference
+between groups with sleep disorder and groups without sleep disorder. Note that
+the lower bound for the difference in diastolic blood pressure is very close to
+0. This approach only considers mean estimation, which is not suffice for 
+further inference. So we will consider regression approach using *svyglm*
+function.
+
+### Resluts from regression approach
+Still working on it.
+
+# Conclusion
+Still working on it.
+
+# To-do list
+1. Include data visualization
+2. Complete the regression approach part
+3. Complete conclusion part
