@@ -1,0 +1,45 @@
+-	Substantive question:
+Do people with sleeping disorder tend to have higher blood pressures?
+
+-	Specific data sets and variables I will use:
+1. 2017-2018 NHANES Demographic data:
+https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.XPT
+Variables of interest:
+SEQN:id
+RIDSTATR: status
+WTMEC2YR: MEC exam weight
+
+2. 2017-2018 NHANES sleep disorder data:
+https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/SLQ_J.XPT
+Variables of interest:
+SEQN:id
+SLD012:weekday sleep hours
+SLD013:weekend sleep hours
+SLQ050:ever told doctor had trouble sleeping
+SLQ120:how often fell overly sleepy during day
+
+3.2017-2018 NHANES blood pressure data:
+https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/BPX_J.XPT
+Variables of interest:
+SEQN:id
+BPXSY1:Systolic Blood Presure 1st measurement
+BPXSY2:Systolic Blood Presure 2nd measurement
+BPXSY3:Systolic Blood Presure 3rd measurement
+BPXDI1:Diastolic Blood Presure 1st measurement
+BPXDI2:Diastolic Blood Presure 2nd measurement
+BPXDI3:Diastolic Blood Presure 3rd measurement
+
+-	Plan for analysis:
+
+1. First create a binary indicator variable is_disorder using SLD012,
+SLD013, SLQ050 and SDQ120 in the sleep disorder data.
+2. Create variable BPXSY as average of BPXSY1-BPXSY3, and BPXDI as average
+of BPXDI1-BPXDI3.
+3. Filter observations with status not equal to 2 in demographic data.
+4. Provide point estimate and confidence interval for BPXSY and BPXDI 
+for people with or without sleep disorder using survey weight.
+5. Provide point estimate and confidence interval for difference between
+people with or without sleep disorder for BPXSY and BPXDI and check whether
+0 is included in the confidence interval to draw conclusion. 
+
+-	Statistical software: R(dplyr)
