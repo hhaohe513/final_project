@@ -1,5 +1,15 @@
+## (Brief Description)
+## We will 2017-2018 NHANES data to investigate the following question:
+## Do people with sleep disorder tend to have higher blood pressure?
+##
+## Author(s): Hao He, hhaohe@umich.edu
+## Updated: Dec 14, 2020 - Last modified date
+# 79: ------------------------------------------------------------------------
+# libraries: -----------------------------------------------------------------
 library(dplyr)
 library(survey)
+library(ggplot2)
+library(splines)
 getwd()
 setwd("C:/Users/hehao/Downloads/506_final/final_project/data")
 # Load data and do some manipulation
@@ -25,7 +35,9 @@ sleep = haven::read_xpt("SLQ_J.XPT") %>%
 merged = demo %>%
   inner_join(sleep, by = "id") %>%
   inner_join(bp, by = "id") %>%
-  select(id, age, gender, weight, psu, strata, is_disorder, BPXSY, BPXDI)
+  select(id, age, gender, weight, psu, strata, is_disorder, BPXSY, BPXDI) %>%
+  mutate(gender = ifelse(gender == 1, "Male", "Female"))
+merged$gender = as.factor(merged$gender)
 
 # Use svydesign for point estimate and confidence interval
 svy = svydesign(ids = ~psu, weights = ~weight, strata = ~strata,
@@ -45,3 +57,8 @@ nice_table = data.frame("Variables" = c("BPXSY","BPXDI"),
   select(Variables, mean_disorder, mean_normal, mean_diff, lwr_diff, upr_diff)
 
 # use svyglm for regression analysis
+sys_glm = svyglm(BPXSY ~ gender + age + is_disorder, design = svy)
+summary(sys_glm)
+dias_glm = svyglm(BPXDI ~ gender + age + is_disorder, design = svy)
+summary(dias_glm)
+
