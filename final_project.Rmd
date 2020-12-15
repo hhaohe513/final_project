@@ -1,7 +1,7 @@
 ---
 title: "Final Project"
 author: "Hao He"
-date: "12/7/2020"
+date: "12/14/2020"
 output: html_document
 ---
 
@@ -23,15 +23,16 @@ condition and we aim to investigate the following question:
 > Do people with sleeping disorder tend to have higher blood pressures? 
 
 **R** is the main software we will use for this analysis. Packages *survey*
-and *dplyr* are also used.
+and *dplyr* are also used.  
+
 We will proceed this analysis by defining binary variables that distinguish
-people with high/normal blood pressure and people with/without sleep disorder.
-Then we will provide point estimates and 95% confidence intervals for the mean 
-blood pressure for people with/without sleep disorder. We will also find 
-points estimates and confidence intervals for the difference between these two
-groups of people and check whether 0 is included in the confidence interval.
-Finally, we will use a regression approach to study whether sleep disorder
-is a significant factor that determine blood pressures or not.
+people with/without sleep disorder. Then we will provide point estimates and
+95% confidence intervals for the mean blood pressure for people with/without
+sleep disorder. We will also find points estimates and confidence intervals 
+for the difference between these two groups of people and check whether 0 is
+included in the confidence interval. Finally, we will use a regression 
+approach to study whether sleep disorder is a significant factor that 
+determine blood pressures or not.
 
 # Data
 We will use the 2017-2018 NHANES [demographic](https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.XPT),
@@ -62,8 +63,8 @@ The specific variables of interests are listed below.
 ### Data Manipulation
 
 ```{r load data and some manipulation, include = FALSE}
-# Load data
 setwd("C:/Users/hehao/Downloads/506_final/final_project/data")
+# Load data and do some manipulation
 demo = haven::read_xpt("DEMO_J.XPT") %>% 
   select(id = SEQN, status = RIDSTATR, weight = WTMEC2YR, age = RIDAGEYR,
          gender = RIAGENDR, psu = SDMVPSU, strata = SDMVSTRA) %>%
@@ -86,7 +87,9 @@ sleep = haven::read_xpt("SLQ_J.XPT") %>%
 merged = demo %>%
   inner_join(sleep, by = "id") %>%
   inner_join(bp, by = "id") %>%
-  select(id, age, gender, weight, psu, strata, is_disorder, BPXSY, BPXDI)
+  select(id, age, gender, weight, psu, strata, is_disorder, BPXSY, BPXDI) %>%
+  mutate(gender = ifelse(gender == 1, "Male", "Female"))
+merged$gender = as.factor(merged$gender)
 ```
 
 We will create the following variables to represent the subjects' systolic 
@@ -99,10 +102,10 @@ or not.
 
 `is_disorder` *= 1*  if any of the following conditions is met: weekday sleep
 hour less than 6, weekend sleep hour less than 7, have ever told doctor with
-trouble sleeping, feel overly sleepy for more than 15 times per month. And *= 0*
-otherwise.
+trouble sleeping, feel overly sleepy for more than 15 times per month. And *= 0* otherwise.
 
-Codes for the data manipulation stated above can be found at 
+Codes for the data manipulation stated above and all the analysis below 
+can be found at 
 [github_link](https://github.com/hhaohe513/final_project) in final_project.R 
 
 ### Point Estimate and Confidence Interval
@@ -122,7 +125,23 @@ mean_se = as.data.frame(svyby(~BPXSY + BPXDI,
 
 ### Regression Approach
 
-Still working On it  
+For the regression approach, we will use the svyglm() function to fit linear
+models for both systolic and diastolic blood pressure. We will consider 
+systolic/diastolic blood pressure as response variables and age, gender and
+the indicator variable is_disorder as predictors. 
+
+Since the main goal of our analysis is to make inference about the relationship
+between blood pressure and sleep disorder, we will focus on the parameter
+coefficients and significance instead of model performances. 
+
+The formulas below indicate the models we are fitting.  
+
+```{}
+BPXSY ~ gender + age + is_disorder
+BPXDI ~ gender + age + is_disorder
+```
+
+
 
 # Results
 
@@ -144,8 +163,6 @@ nice_table = data.frame("Variables" = c("BPXSY","BPXDI"),
 nice_table %>% 
   knitr::kable(
     format = 'html', 
-    escape = FALSE, 
-    align = 'llccc',
     digits = 4
   ) %>%
   kableExtra::kable_styling("striped", full_width = TRUE)
@@ -160,12 +177,32 @@ further inference. So we will consider regression approach using *svyglm*
 function.
 
 ### Resluts from regression approach
-Still working on it.
+```{r regression fit,include = FALSE}
+sys_glm = svyglm(BPXSY ~ gender + age + is_disorder, design = svy)
+dias_glm = svyglm(BPXDI ~ gender + age + is_disorder, design = svy)
+```
 
-# Conclusion
-Still working on it.
+```{r regression result, include = TRUE}
+summary(sys_glm)
+summary(dias_glm)
+```
 
-# To-do list
-1. Include data visualization
-2. Complete the regression approach part
-3. Complete conclusion part
+From the model result, we observe that for both models, sleep disorder is a
+significant predictor in the model. The coefficients from the model results 
+suggest that people with sleep disorder have 2.05 higher systolic blood
+pressure and 1.46 higher diastolic blood pressure than those who don't have
+sleep disorder. These numbers are slightly different from the estimated
+difference because we include age and gender as covariates.
+
+# Conclusion  
+
+The results from point estimation and regression coincides with each other, so
+we are confident to conclude that people with sleep disorder tend to have 
+higher blood pressure than those who don't. However, we must notice that this
+analysis is very simplistic and limited. The regression approach could be done
+in much more complicated ways by including more variables and considering more
+possible models. With more options of models, we may use methods like 
+cross-validation to test for model performances and do model selection. The 
+interpretation may also become more interesting by discussing the potential 
+confounding variables and the collider effects among variables.
+
