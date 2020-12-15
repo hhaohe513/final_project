@@ -11,6 +11,7 @@
 
 <meta name="author" content="Hao He" />
 
+<meta name="date" content="2020-12-14" />
 
 <title>Final Project</title>
 
@@ -559,7 +560,7 @@ summary {
 
 <h1 class="title toc-ignore">Final Project</h1>
 <h4 class="author">Hao He</h4>
-<h4 class="date">12/7/2020</h4>
+<h4 class="date">12/14/2020</h4>
 
 </div>
 
@@ -570,7 +571,8 @@ summary {
 <blockquote>
 <p>Do people with sleeping disorder tend to have higher blood pressures?</p>
 </blockquote>
-<p><strong>R</strong> is the main software we will use for this analysis. Packages <em>survey</em> and <em>dplyr</em> are also used. We will proceed this analysis by defining binary variables that distinguish people with high/normal blood pressure and people with/without sleep disorder. Then we will provide point estimates and 95% confidence intervals for the mean blood pressure for people with/without sleep disorder. We will also find points estimates and confidence intervals for the difference between these two groups of people and check whether 0 is included in the confidence interval. Finally, we will use a regression approach to study whether sleep disorder is a significant factor that determine blood pressures or not.</p>
+<p><strong>R</strong> is the main software we will use for this analysis. Packages <em>survey</em> and <em>dplyr</em> are also used.</p>
+<p>We will proceed this analysis by defining binary variables that distinguish people with/without sleep disorder. Then we will provide point estimates and 95% confidence intervals for the mean blood pressure for people with/without sleep disorder. We will also find points estimates and confidence intervals for the difference between these two groups of people and check whether 0 is included in the confidence interval. Finally, we will use a regression approach to study whether sleep disorder is a significant factor that determine blood pressures or not.</p>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
@@ -600,7 +602,7 @@ The specific variables of interests are listed below.<br />
 <p><code>BPXSY</code> : the average systolic blood pressure out of three measurements</p>
 <p><code>BPXDI</code> : the average diastolic blood pressure out of three measurements</p>
 <p><code>is_disorder</code> <em>= 1</em> if any of the following conditions is met: weekday sleep hour less than 6, weekend sleep hour less than 7, have ever told doctor with trouble sleeping, feel overly sleepy for more than 15 times per month. And <em>= 0</em> otherwise.</p>
-<p>Codes for the data manipulation stated above can be found at <a href="https://github.com/hhaohe513/final_project">github_link</a> in final_project.R</p>
+<p>Codes for the data manipulation stated above and all the analysis below can be found at <a href="https://github.com/hhaohe513/final_project">github_link</a> in final_project.R</p>
 </div>
 <div id="point-estimate-and-confidence-interval" class="section level3">
 <h3>Point Estimate and Confidence Interval</h3>
@@ -613,7 +615,11 @@ mean_se = as.data.frame(svyby(~BPXSY + BPXDI,
 </div>
 <div id="regression-approach" class="section level3">
 <h3>Regression Approach</h3>
-<p>Still working On it</p>
+<p>For the regression approach, we will use the svyglm() function to fit linear models for both systolic and diastolic blood pressure. We will consider systolic/diastolic blood pressure as response variables and age, gender and the indicator variable is_disorder as predictors.</p>
+<p>Since the main goal of our analysis is to make inference about the relationship between blood pressure and sleep disorder, we will focus on the parameter coefficients and significance instead of model performances.</p>
+<p>The formulas below indicate the models we are fitting.</p>
+<pre><code>BPXSY ~ gender + age + is_disorder
+BPXDI ~ gender + age + is_disorder</code></pre>
 </div>
 </div>
 <div id="results" class="section level1">
@@ -623,8 +629,6 @@ mean_se = as.data.frame(svyby(~BPXSY + BPXDI,
 <pre class="r"><code>nice_table %&gt;% 
   knitr::kable(
     format = &#39;html&#39;, 
-    escape = FALSE, 
-    align = &#39;llccc&#39;,
     digits = 4
   ) %&gt;%
   kableExtra::kable_styling(&quot;striped&quot;, full_width = TRUE)</code></pre>
@@ -634,19 +638,19 @@ mean_se = as.data.frame(svyby(~BPXSY + BPXDI,
 <th style="text-align:left;">
 Variables
 </th>
-<th style="text-align:left;">
+<th style="text-align:right;">
 mean_disorder
 </th>
-<th style="text-align:center;">
+<th style="text-align:right;">
 mean_normal
 </th>
-<th style="text-align:center;">
+<th style="text-align:right;">
 mean_diff
 </th>
-<th style="text-align:center;">
+<th style="text-align:right;">
 lwr_diff
 </th>
-<th style="text-align:left;">
+<th style="text-align:right;">
 upr_diff
 </th>
 </tr>
@@ -656,19 +660,19 @@ upr_diff
 <td style="text-align:left;">
 BPXSY
 </td>
-<td style="text-align:left;">
+<td style="text-align:right;">
 124.4370
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 120.0078
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 4.4293
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 3.1073
 </td>
-<td style="text-align:left;">
+<td style="text-align:right;">
 5.7513
 </td>
 </tr>
@@ -676,19 +680,19 @@ BPXSY
 <td style="text-align:left;">
 BPXDI
 </td>
-<td style="text-align:left;">
+<td style="text-align:right;">
 72.4149
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 70.7036
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 1.7113
 </td>
-<td style="text-align:center;">
+<td style="text-align:right;">
 0.0003
 </td>
-<td style="text-align:left;">
+<td style="text-align:right;">
 3.4222
 </td>
 </tr>
@@ -698,20 +702,54 @@ BPXDI
 </div>
 <div id="resluts-from-regression-approach" class="section level3">
 <h3>Resluts from regression approach</h3>
-<p>Still working on it.</p>
+<pre class="r"><code>summary(sys_glm)</code></pre>
+<pre><code>## 
+## Call:
+## svyglm(formula = BPXSY ~ gender + age + is_disorder, design = svy)
+## 
+## Survey design:
+## svydesign(ids = ~psu, weights = ~weight, strata = ~strata, data = merged, 
+##     nest = TRUE)
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) 99.45547    0.47315 210.197  &lt; 2e-16 ***
+## genderMale   3.64566    0.75534   4.826 0.000414 ***
+## age          0.42989    0.01477  29.104 1.69e-12 ***
+## is_disorder  2.05125    0.53666   3.822 0.002430 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for gaussian family taken to be 228.5197)
+## 
+## Number of Fisher Scoring iterations: 2</code></pre>
+<pre class="r"><code>summary(dias_glm)</code></pre>
+<pre><code>## 
+## Call:
+## svyglm(formula = BPXDI ~ gender + age + is_disorder, design = svy)
+## 
+## Survey design:
+## svydesign(ids = ~psu, weights = ~weight, strata = ~strata, data = merged, 
+##     nest = TRUE)
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) 66.75327    0.62290 107.165  &lt; 2e-16 ***
+## genderMale   3.94573    0.69139   5.707  9.8e-05 ***
+## age          0.04617    0.01113   4.148  0.00135 ** 
+## is_disorder  1.46748    0.41943   3.499  0.00439 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for gaussian family taken to be 130.3)
+## 
+## Number of Fisher Scoring iterations: 2</code></pre>
+<p>From the model result, we observe that for both models, sleep disorder is a significant predictor in the model. The coefficients from the model results suggest that people with sleep disorder have 2.05 higher systolic blood pressure and 1.46 higher diastolic blood pressure than those who don’t have sleep disorder. These numbers are slightly different from the estimated difference because we include age and gender as covariates.</p>
 </div>
 </div>
 <div id="conclusion" class="section level1">
 <h1>Conclusion</h1>
-<p>Still working on it.</p>
-</div>
-<div id="to-do-list" class="section level1">
-<h1>To-do list</h1>
-<ol style="list-style-type: decimal">
-<li>Include data visualization</li>
-<li>Complete the regression approach part</li>
-<li>Complete conclusion part</li>
-</ol>
+<p>The results from point estimation and regression coincides with each other, so we are confident to conclude that people with sleep disorder tend to have higher blood pressure than those who don’t. However, we must notice that this analysis is very simplistic and limited. The regression approach could be done in much more complicated ways by including more variables and considering more possible models. With more options of models, we may use methods like cross-validation to test for model performances and do model selection. The interpretation may also become more interesting by discussing the potential confounding variables and the collider effects among variables.</p>
 </div>
 
 
